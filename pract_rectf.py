@@ -332,18 +332,21 @@ def apply_capacitor_filter(t, v_rect, C, RL, freq_ripple):
 if mode == "Half-Wave Rectifier":
     v_rect_raw = half_wave(v_in, Vd)
     color_main = "#4ade80"
+    fill_main  = "rgba(74,222,128,0.07)"
     label_rect = "Half-Wave Output"
     n_diodes = 1
     ripple_freq_mult = 1  # ripple at f
 elif mode == "Full-Wave — Centre Tap":
     v_rect_raw = full_wave_ct(v_in, Vd)
     color_main = "#818cf8"
+    fill_main  = "rgba(129,140,248,0.07)"
     label_rect = "Full-Wave CT Output"
     n_diodes = 2
     ripple_freq_mult = 2
 else:
     v_rect_raw = full_wave_bridge(v_in, Vd)
     color_main = "#fb923c"
+    fill_main  = "rgba(251,146,60,0.07)"
     label_rect = "Bridge Rectifier Output"
     n_diodes = 4
     ripple_freq_mult = 2
@@ -453,7 +456,7 @@ with tab1:
         name=label_rect + (" + Filter" if use_cap else ""),
         line=dict(color=color_main, width=2.5),
         fill="tozeroy",
-        fillcolor=color_main.replace(")", ", 0.06)").replace("rgb", "rgba") if "rgb" in color_main else color_main + "12"
+        fillcolor=fill_main
     ), row=1, col=1)
 
     # DC level line
