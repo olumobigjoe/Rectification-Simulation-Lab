@@ -115,7 +115,6 @@ st.markdown("""
     <p class="hero-title">⚡ TOPIC: Rectification</p>
     <p class="hero-subtitle">SIMULATION LABORATORY</p>
     <p class="hero-subtitle">Department of Physics/Electronics</p>
-    #<p class="hero-subtitle">Federal  Polytechnic Ado-Ekiti</p>
 </div>
 """, unsafe_allow_html=True)
 
