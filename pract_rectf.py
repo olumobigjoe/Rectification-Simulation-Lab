@@ -112,8 +112,9 @@ for k, v in defaults.items():
 # ─── HERO BANNER ─────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero-banner">
-    <p class="hero-title">⚡ Rectification For Beginners</p>
-    <p class="hero-subtitle">Department of Physics/Electronics — Virtual Electronics Laboratory · Half-Wave &amp; Full-Wave Circuits</p>
+    <p class="hero-title">⚡ TOPIC: Rectification</p>
+    <p class="hero-subtitle">Department of Physics/Electronics — Virtual Electronics Laboratory</p>
+    <p class="hero-subtitlee">Federal  Polytechnic Ado-Ekiti</p>
 </div>
 """, unsafe_allow_html=True)
 
