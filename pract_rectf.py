@@ -119,12 +119,12 @@ st.markdown("""
 
 # ─── LOGIN GATE ──────────────────────────────────────────────────────────────
 if not st.session_state["auth"]:
-    st.markdown('<p class="section-header">// Login</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">ACCESS</p>', unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1, 1.4, 1])
     with c2:
-        st.markdown("Enter your **Matriculation Number** to LOGIN.")
-        matric = st.text_input("Matriculation Number", placeholder="e.g. ENG/2022/001")
-        if st.button("▶  ACTIVATE"):
+        st.markdown("Enter your **Matriculation Number**")
+        matric = st.text_input("Matriculation Number", placeholder="e.g. PHY/2026/0001")
+        if st.button("▶  LOGIN"):
             if matric.strip():
                 st.session_state["student_id"] = matric.strip()
                 st.session_state["auth"] = True
