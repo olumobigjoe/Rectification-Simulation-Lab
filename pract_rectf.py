@@ -8,7 +8,7 @@ import os
 
 # ─── PAGE CONFIG ─────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Rectification for Beeginners",
+    page_title="Rectification for Beginners",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -112,8 +112,8 @@ for k, v in defaults.items():
 # ─── HERO BANNER ─────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero-banner">
-    <p class="hero-title">⚡ Rectification For Beginneers</p>
-    <p class="hero-subtitle">Department of Physics/Electronics — Electronics Laboratory · Half-Wave &amp; Full-Wave Circuits</p>
+    <p class="hero-title">⚡ Rectification For Beginners</p>
+    <p class="hero-subtitle">Department of Physics/Electronics — Virtual Electronics Laboratory · Half-Wave &amp; Full-Wave Circuits</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -122,7 +122,7 @@ if not st.session_state["auth"]:
     st.markdown('<p class="section-header">// Login</p>', unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1, 1.4, 1])
     with c2:
-        st.markdown("Enter your **Matriculation Number** to initialise the lab bench.")
+        st.markdown("Enter your **Matriculation Number** to LOGIN.")
         matric = st.text_input("Matriculation Number", placeholder="e.g. ENG/2022/001")
         if st.button("▶  ACTIVATE"):
             if matric.strip():
