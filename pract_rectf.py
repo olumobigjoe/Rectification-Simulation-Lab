@@ -1,8 +1,8 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from datetime import datetime
 import os
 
@@ -40,6 +40,16 @@ st.markdown("""
     .metric-card .value { font-family: 'Share Tech Mono', monospace; font-size: 1.5rem; color: #00d4ff; margin-top: 4px; }
     .metric-card .unit  { font-size: 0.7rem; color: #4a7a9b; }
 
+    .param-display {
+        background: #0d1520; border: 1px solid #1e3a5f; border-radius: 8px;
+        padding: 10px 0; text-align: center;
+        font-family: 'Share Tech Mono', monospace; font-size: 1.3rem; color: #00d4ff;
+    }
+    .param-label {
+        font-size: 0.72rem; color: #7a9cc4; text-transform: uppercase;
+        letter-spacing: 0.1em; text-align: center; margin-bottom: 4px;
+    }
+
     .theory-box {
         background: #0d1b2a; border-left: 3px solid #0080ff;
         border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 12px 0;
@@ -54,17 +64,16 @@ st.markdown("""
     }
 
     [data-testid="stSidebar"] { background: #0d1520; border-right: 1px solid #1e3a5f; }
-    [data-testid="stSidebar"] .stRadio label { color: #c0d4e8 !important; }
     [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #00d4ff; }
-
-    .stSlider > div { padding: 0; }
-    div[data-baseweb="slider"] { padding-top: 0; }
-    .stSelectbox label, .stSlider label, .stRadio label { color: #c0d4e8 !important; font-size: 0.85rem !important; }
+    .stSelectbox label { color: #c0d4e8 !important; font-size: 0.85rem !important; }
 
     .stTabs [data-baseweb="tab-list"] { background: #0d1520; border-bottom: 1px solid #1e3a5f; gap: 2px; }
-    .stTabs [data-baseweb="tab"] { background: transparent; color: #7a9cc4; border: none; font-size: 0.85rem; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.05em; }
-    .stTabs [aria-selected="true"] { background: #111827 !important; color: #00d4ff !important; border-bottom: 2px solid #00d4ff !important; }
+    .stTabs [data-baseweb="tab"] { background: transparent; color: #7a9cc4; border: none;
+        font-size: 0.85rem; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.05em; }
+    .stTabs [aria-selected="true"] { background: #111827 !important; color: #00d4ff !important;
+        border-bottom: 2px solid #00d4ff !important; }
 
+    /* All buttons share base style; stepper buttons get overridden via key trick */
     .stButton > button {
         background: #0d2a4a; color: #00d4ff; border: 1px solid #0080ff; border-radius: 6px;
         font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; letter-spacing: 0.05em;
@@ -90,9 +99,15 @@ def log_action(student_id, action, details=""):
         entry.to_csv(LOG_FILE, mode='a', header=False, index=False)
 
 # ─── SESSION STATE ────────────────────────────────────────────────────────────
-for key, default in [("auth", False), ("student_id", "")]:
-    if key not in st.session_state:
-        st.session_state[key] = default
+defaults = {
+    "auth":       False,
+    "student_id": "",
+    "Vp":         12.0,   # Peak voltage default
+    "freq":       50,     # Frequency default
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # ─── HERO BANNER ─────────────────────────────────────────────────────────────
 st.markdown("""
@@ -131,8 +146,34 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### AC Source")
-    Vp   = st.slider("Peak Voltage  Vₚ (V)", 1.0, 50.0, 12.0, 0.5)
-    freq = st.slider("Frequency  f (Hz)", 10, 500, 50, 10)
+
+    # ── Peak Voltage stepper ──────────────────────────────
+    st.markdown('<p class="param-label">Peak Voltage  Vₚ</p>', unsafe_allow_html=True)
+    vp_col1, vp_col2, vp_col3 = st.columns([1, 1.6, 1])
+    with vp_col1:
+        if st.button("−", key="vp_down"):
+            st.session_state["Vp"] = max(1.0, round(st.session_state["Vp"] - 0.5, 1))
+    with vp_col2:
+        st.markdown(f'<div class="param-display">{st.session_state["Vp"]:.1f} V</div>',
+                    unsafe_allow_html=True)
+    with vp_col3:
+        if st.button("+", key="vp_up"):
+            st.session_state["Vp"] = min(50.0, round(st.session_state["Vp"] + 0.5, 1))
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Frequency stepper ────────────────────────────────
+    st.markdown('<p class="param-label">Frequency  f</p>', unsafe_allow_html=True)
+    fr_col1, fr_col2, fr_col3 = st.columns([1, 1.6, 1])
+    with fr_col1:
+        if st.button("−", key="fr_down"):
+            st.session_state["freq"] = max(10, st.session_state["freq"] - 10)
+    with fr_col2:
+        st.markdown(f'<div class="param-display">{st.session_state["freq"]} Hz</div>',
+                    unsafe_allow_html=True)
+    with fr_col3:
+        if st.button("+", key="fr_up"):
+            st.session_state["freq"] = min(500, st.session_state["freq"] + 10)
 
     st.markdown("---")
     st.caption(f"👤 Student: `{st.session_state['student_id']}`")
@@ -140,15 +181,19 @@ with st.sidebar:
         st.session_state["auth"] = False
         st.rerun()
 
+# ─── READ CURRENT VALUES FROM SESSION STATE ───────────────────────────────────
+Vp   = st.session_state["Vp"]
+freq = st.session_state["freq"]
+
 # ─── FIXED CIRCUIT CONSTANTS ─────────────────────────────────────────────────
-Vd       = 0.7    # diode forward drop (V)
-RL       = 500    # load resistance (Ω)
+Vd       = 0.7
+RL       = 500
 n_cycles = 3
 
 # ─── SIGNAL GENERATION ───────────────────────────────────────────────────────
-T     = 1.0 / freq
-t     = np.linspace(0, n_cycles * T, 8000)
-v_in  = Vp * np.sin(2 * np.pi * freq * t)
+T    = 1.0 / freq
+t    = np.linspace(0, n_cycles * T, 8000)
+v_in = Vp * np.sin(2 * np.pi * freq * t)
 
 def half_wave(v, vd):
     return np.where(v > vd, v - vd, 0.0)
@@ -159,7 +204,7 @@ def full_wave_ct(v, vd):
 def full_wave_bridge(v, vd):
     return np.where(np.abs(v) > 2 * vd, np.abs(v) - 2 * vd, 0.0)
 
-# ─── TOPOLOGY SELECTION ──────────────────────────────────────────────────────
+# ─── TOPOLOGY ────────────────────────────────────────────────────────────────
 if mode == "Half-Wave Rectifier":
     v_out            = half_wave(v_in, Vd)
     color_main       = "#4ade80"
@@ -167,7 +212,6 @@ if mode == "Half-Wave Rectifier":
     label_rect       = "Half-Wave Output"
     n_diodes         = 1
     ripple_freq_mult = 1
-
 elif mode == "Full-Wave — Centre Tap":
     v_out            = full_wave_ct(v_in, Vd)
     color_main       = "#818cf8"
@@ -175,7 +219,6 @@ elif mode == "Full-Wave — Centre Tap":
     label_rect       = "Full-Wave CT Output"
     n_diodes         = 2
     ripple_freq_mult = 2
-
 else:
     v_out            = full_wave_bridge(v_in, Vd)
     color_main       = "#fb923c"
@@ -184,23 +227,205 @@ else:
     n_diodes         = 4
     ripple_freq_mult = 2
 
-# ─── METRICS CALCULATION ─────────────────────────────────────────────────────
+# ─── METRICS ─────────────────────────────────────────────────────────────────
 Vout_peak     = float(v_out.max())
 Vout_dc       = float(v_out.mean())
 Vout_rms      = float(np.sqrt(np.mean(v_out ** 2)))
-Vin_rms       = float(np.sqrt(np.mean(v_in ** 2)))
+Vin_rms       = float(np.sqrt(np.mean(v_in  ** 2)))
 Vripple_pp    = float(v_out.max() - v_out.min())
-Vac_rms       = float(np.sqrt(max(Vout_rms ** 2 - Vout_dc ** 2, 0.0)))
+Vac_rms       = float(np.sqrt(max(Vout_rms**2 - Vout_dc**2, 0.0)))
 ripple_factor = (Vac_rms / Vout_dc) if Vout_dc > 0 else 0.0
-P_dc          = (Vout_dc ** 2) / RL
-P_in          = (Vin_rms ** 2) / RL
+P_dc          = (Vout_dc**2)  / RL
+P_in          = (Vin_rms**2)  / RL
 eta           = (P_dc / P_in * 100) if P_in > 0 else 0.0
-Idc           = Vout_dc   / RL * 1000   # mA
-Ipeak         = Vout_peak / RL * 1000   # mA
+Idc           = Vout_dc   / RL * 1000
+Ipeak         = Vout_peak / RL * 1000
 PIV           = (2 * Vp - Vd) if mode == "Full-Wave — Centre Tap" else Vp
 
 log_action(st.session_state["student_id"], "Signal_Generated",
            f"Mode={mode}, Vp={Vp}, f={freq}")
+
+# ─── CIRCUIT DIAGRAM HTML TEMPLATES ──────────────────────────────────────────
+# Rendered via components.html to bypass Streamlit's SVG sanitiser
+
+DIAG_STYLE = """
+<style>
+  body { margin:0; padding:8px; background:#0d1520; }
+  .w   { stroke:#60a5fa; stroke-width:2; fill:none; }
+  .t   { fill:#c0d4e8; font-family:monospace; font-size:13px; }
+</style>
+"""
+
+def diag_hw():
+    return DIAG_STYLE + """
+<svg viewBox="0 0 620 150" xmlns="http://www.w3.org/2000/svg" width="100%">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#facc15"/>
+    </marker>
+  </defs>
+
+  <!-- AC Source -->
+  <circle cx="70" cy="75" r="32" class="w"/>
+  <text x="70" y="70" text-anchor="middle" class="t" font-size="18">~</text>
+  <text x="70" y="120" text-anchor="middle" style="fill:#00d4ff;font-family:monospace;font-size:11px">Vᵢₙ</text>
+  <text x="70" y="134" text-anchor="middle" style="fill:#7a9cc4;font-family:monospace;font-size:9px">AC Source</text>
+
+  <!-- Top wire: source → diode -->
+  <line x1="102" y1="43" x2="220" y2="43" class="w"/>
+
+  <!-- Diode symbol (anode left, cathode right) -->
+  <polygon points="220,28 220,58 252,43" style="fill:#4ade80;stroke:#4ade80;stroke-width:1"/>
+  <line x1="252" y1="27" x2="252" y2="59" style="stroke:#4ade80;stroke-width:3"/>
+  <text x="236" y="20" text-anchor="middle" style="fill:#4ade80;font-family:monospace;font-size:12px;font-weight:bold">D</text>
+
+  <!-- Wire: diode → resistor -->
+  <line x1="252" y1="43" x2="360" y2="43" class="w"/>
+
+  <!-- Load resistor -->
+  <rect x="360" y="28" width="90" height="30" rx="4" style="fill:#1a2a1a;stroke:#4ade80;stroke-width:1.8"/>
+  <text x="405" y="48" text-anchor="middle" style="fill:#4ade80;font-family:monospace;font-size:12px">Rₗ</text>
+  <text x="405" y="73" text-anchor="middle" style="fill:#7a9cc4;font-family:monospace;font-size:9px">500 Ω</text>
+
+  <!-- Wire: resistor → right node -->
+  <line x1="450" y1="43" x2="530" y2="43" class="w"/>
+  <line x1="530" y1="43" x2="530" y2="107" class="w"/>
+
+  <!-- Bottom return wire -->
+  <line x1="102" y1="107" x2="530" y2="107" class="w"/>
+
+  <!-- Vout measurement indicator -->
+  <line x1="500" y1="49" x2="500" y2="101" style="stroke:#facc15;stroke-width:1.8;stroke-dasharray:5,3"/>
+  <line x1="495" y1="49"  x2="505" y2="49"  style="stroke:#facc15;stroke-width:2"/>
+  <line x1="495" y1="101" x2="505" y2="101" style="stroke:#facc15;stroke-width:2"/>
+  <text x="510" y="78" style="fill:#facc15;font-family:monospace;font-size:11px">Vₒᵤₜ</text>
+</svg>"""
+
+def diag_fwct():
+    return DIAG_STYLE + """
+<svg viewBox="0 0 660 220" xmlns="http://www.w3.org/2000/svg" width="100%">
+  <!-- Transformer box -->
+  <rect x="20" y="50" width="70" height="120" rx="5" style="fill:#0a1222;stroke:#60a5fa;stroke-width:1.8"/>
+  <text x="55" y="105" text-anchor="middle" class="t" font-size="20">~</text>
+  <text x="55" y="125" text-anchor="middle" class="t" font-size="9">Transformer</text>
+  <!-- Primary taps -->
+  <line x1="90" y1="75"  x2="110" y2="75"  class="w"/>
+  <line x1="90" y1="145" x2="110" y2="145" class="w"/>
+  <!-- Centre tap (dashed) -->
+  <line x1="90" y1="110" x2="480" y2="110" style="stroke:#60a5fa;stroke-width:1.5;stroke-dasharray:5,4"/>
+  <text x="112" y="107" style="fill:#7a9cc4;font-family:monospace;font-size:9px">CT (GND)</text>
+
+  <!-- D1 — top diode (anode at left of top rail) -->
+  <line x1="110" y1="75" x2="200" y2="75" class="w"/>
+  <polygon points="200,62 200,88 232,75" style="fill:#818cf8;stroke:#818cf8;stroke-width:1"/>
+  <line x1="232" y1="61" x2="232" y2="89" style="stroke:#818cf8;stroke-width:3"/>
+  <text x="216" y="55" text-anchor="middle" style="fill:#818cf8;font-family:monospace;font-size:12px;font-weight:bold">D₁</text>
+
+  <!-- D2 — bottom diode (anode at left of bottom rail) -->
+  <line x1="110" y1="145" x2="200" y2="145" class="w"/>
+  <polygon points="200,132 200,158 232,145" style="fill:#818cf8;stroke:#818cf8;stroke-width:1"/>
+  <line x1="232" y1="131" x2="232" y2="159" style="stroke:#818cf8;stroke-width:3"/>
+  <text x="216" y="172" text-anchor="middle" style="fill:#818cf8;font-family:monospace;font-size:12px;font-weight:bold">D₂</text>
+
+  <!-- Both cathodes join at right node -->
+  <line x1="232" y1="75"  x2="320" y2="75"  class="w"/>
+  <line x1="232" y1="145" x2="320" y2="145" class="w"/>
+  <line x1="320" y1="75"  x2="320" y2="95"  class="w"/>
+  <line x1="320" y1="145" x2="320" y2="125" class="w"/>
+  <line x1="320" y1="95"  x2="360" y2="95"  class="w"/>
+  <line x1="320" y1="125" x2="360" y2="125" class="w"/>
+
+  <!-- Load resistor -->
+  <rect x="360" y="90" width="90" height="40" rx="4" style="fill:#1a1a2a;stroke:#818cf8;stroke-width:1.8"/>
+  <text x="405" y="115" text-anchor="middle" style="fill:#818cf8;font-family:monospace;font-size:12px">Rₗ</text>
+  <text x="405" y="145" text-anchor="middle" style="fill:#7a9cc4;font-family:monospace;font-size:9px">500 Ω</text>
+
+  <!-- Wire from resistor to right side -->
+  <line x1="450" y1="95"  x2="530" y2="95"  class="w"/>
+  <line x1="450" y1="125" x2="480" y2="125" class="w"/>
+  <line x1="480" y1="125" x2="480" y2="110" class="w"/>
+  <line x1="480" y1="110" x2="530" y2="110" class="w"/>
+
+  <!-- Vout -->
+  <line x1="530" y1="95"  x2="530" y2="110" class="w"/>
+  <line x1="510" y1="97"  x2="510" y2="108" style="stroke:#facc15;stroke-width:1.8;stroke-dasharray:4,3"/>
+  <line x1="505" y1="97"  x2="515" y2="97"  style="stroke:#facc15;stroke-width:2"/>
+  <line x1="505" y1="108" x2="515" y2="108" style="stroke:#facc15;stroke-width:2"/>
+  <text x="538" y="105" style="fill:#facc15;font-family:monospace;font-size:11px">Vₒᵤₜ</text>
+</svg>"""
+
+def diag_bridge():
+    return DIAG_STYLE + """
+<svg viewBox="0 0 660 230" xmlns="http://www.w3.org/2000/svg" width="100%">
+  <!-- AC Source -->
+  <circle cx="70" cy="115" r="32" class="w"/>
+  <text x="70" y="110" text-anchor="middle" class="t" font-size="18">~</text>
+  <text x="70" y="160" text-anchor="middle" style="fill:#00d4ff;font-family:monospace;font-size:11px">Vᵢₙ</text>
+  <text x="70" y="173" text-anchor="middle" style="fill:#7a9cc4;font-family:monospace;font-size:9px">AC Source</text>
+
+  <!-- Wires from source to bridge input nodes -->
+  <!-- Top input node at (210, 75) -->
+  <line x1="102" y1="83"  x2="210" y2="83"  class="w"/>
+  <!-- Bottom input node at (210, 155) -->
+  <line x1="102" y1="147" x2="210" y2="147" class="w"/>
+
+  <!-- Bridge nodes: L=(210,115) T=(300,55) R=(390,115) B=(300,175) -->
+  <!-- Left node vertical connector -->
+  <line x1="210" y1="83"  x2="210" y2="147" class="w"/>
+
+  <!-- D1: L→T  (left to top-output) -->
+  <line x1="210" y1="115" x2="240" y2="90"  class="w"/>
+  <polygon points="240,90 256,78 248,100" style="fill:#fb923c;stroke:#fb923c;stroke-width:1"/>
+  <line x1="256" y1="68" x2="256" y2="88" style="stroke:#fb923c;stroke-width:3"/>
+  <line x1="256" y1="78" x2="300" y2="55" class="w"/>
+  <text x="230" y="68" style="fill:#fb923c;font-family:monospace;font-size:11px;font-weight:bold">D₁</text>
+
+  <!-- D3: T→R  (top to right) -->
+  <line x1="300" y1="55" x2="344" y2="78" class="w"/>
+  <polygon points="344,78 336,100 352,90" style="fill:#fb923c;stroke:#fb923c;stroke-width:1"/>
+  <line x1="352" y1="70" x2="352" y2="90" style="stroke:#fb923c;stroke-width:3"/>
+  <line x1="352" y1="80" x2="390" y2="115" class="w"/>
+  <text x="344" y="60" style="fill:#fb923c;font-family:monospace;font-size:11px;font-weight:bold">D₃</text>
+
+  <!-- D4: L→B  (left to bottom) -->
+  <line x1="210" y1="115" x2="240" y2="140" class="w"/>
+  <polygon points="240,140 256,152 248,130" style="fill:#fb923c;stroke:#fb923c;stroke-width:1"/>
+  <line x1="256" y1="142" x2="256" y2="162" style="stroke:#fb923c;stroke-width:3"/>
+  <line x1="256" y1="152" x2="300" y2="175" class="w"/>
+  <text x="218" y="166" style="fill:#fb923c;font-family:monospace;font-size:11px;font-weight:bold">D₄</text>
+
+  <!-- D2: B→R  (bottom to right) -->
+  <line x1="300" y1="175" x2="344" y2="152" class="w"/>
+  <polygon points="344,152 336,130 352,140" style="fill:#fb923c;stroke:#fb923c;stroke-width:1"/>
+  <line x1="352" y1="130" x2="352" y2="150" style="stroke:#fb923c;stroke-width:3"/>
+  <line x1="352" y1="140" x2="390" y2="115" class="w"/>
+  <text x="344" y="178" style="fill:#fb923c;font-family:monospace;font-size:11px;font-weight:bold">D₂</text>
+
+  <!-- Right node down to load positive -->
+  <line x1="390" y1="115" x2="430" y2="115" class="w"/>
+
+  <!-- Bottom return from source back through bridge bottom node -->
+  <!-- source bottom → bridge bottom node -->
+  <!-- The bottom input wire splits: one goes to D4 anode side (left node), already connected -->
+  <!-- Ground/return: bridge bottom node (300,175) → down → right → load negative -->
+  <line x1="300" y1="175" x2="300" y2="200" class="w"/>
+  <line x1="300" y1="200" x2="510" y2="200" class="w"/>
+  <line x1="510" y1="200" x2="510" y2="135" class="w"/>
+
+  <!-- Load resistor (vertical) -->
+  <rect x="430" y="95" width="80" height="40" rx="4" style="fill:#2a1a0a;stroke:#fb923c;stroke-width:1.8"/>
+  <text x="470" y="120" text-anchor="middle" style="fill:#fb923c;font-family:monospace;font-size:12px">Rₗ</text>
+  <line x1="510" y1="95"  x2="510" y2="115" class="w"/>
+
+  <!-- Vout indicator -->
+  <line x1="555" y1="97"  x2="555" y2="133" style="stroke:#facc15;stroke-width:1.8;stroke-dasharray:5,3"/>
+  <line x1="549" y1="97"  x2="561" y2="97"  style="stroke:#facc15;stroke-width:2"/>
+  <line x1="549" y1="133" x2="561" y2="133" style="stroke:#facc15;stroke-width:2"/>
+  <text x="563" y="118" style="fill:#facc15;font-family:monospace;font-size:11px">Vₒᵤₜ</text>
+
+  <!-- Connect load top to right node -->
+  <line x1="430" y1="115" x2="430" y2="95" class="w"/>
+</svg>"""
 
 # ─── TABS ────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3 = st.tabs([
@@ -215,7 +440,6 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
     st.markdown('<p class="section-header">// Live Waveform Measurements</p>', unsafe_allow_html=True)
 
-    # Metric cards
     def mcard(col, label, val, unit):
         col.markdown(f"""
         <div class="metric-card">
@@ -225,28 +449,23 @@ with tab1:
         </div>""", unsafe_allow_html=True)
 
     m1, m2, m3, m4, m5, m6 = st.columns(6)
-    mcard(m1, "V_peak",       f"{Vout_peak:.2f}",   "V")
-    mcard(m2, "V_DC",         f"{Vout_dc:.2f}",     "V")
-    mcard(m3, "V_RMS",        f"{Vout_rms:.2f}",    "V")
-    mcard(m4, "Ripple Factor",f"{ripple_factor:.4f}","γ")
-    mcard(m5, "Efficiency",   f"{eta:.1f}",          "%")
-    mcard(m6, "PIV",          f"{PIV:.2f}",          "V")
+    mcard(m1, "V_peak",        f"{Vout_peak:.2f}",    "V")
+    mcard(m2, "V_DC",          f"{Vout_dc:.2f}",      "V")
+    mcard(m3, "V_RMS",         f"{Vout_rms:.2f}",     "V")
+    mcard(m4, "Ripple Factor", f"{ripple_factor:.4f}", "γ")
+    mcard(m5, "Efficiency",    f"{eta:.1f}",           "%")
+    mcard(m6, "PIV",           f"{PIV:.2f}",           "V")
 
     st.markdown("")
-
-    t_ms = t * 1000   # time axis in milliseconds
+    t_ms = t * 1000
 
     fig = go.Figure()
-
-    # AC input
     fig.add_trace(go.Scatter(
         x=t_ms, y=v_in,
         name="AC Input  vᵢₙ(t)",
         line=dict(color="#60a5fa", width=1.5, dash="dot"),
         opacity=0.65
     ))
-
-    # Rectified output
     fig.add_trace(go.Scatter(
         x=t_ms, y=v_out,
         name=label_rect,
@@ -254,8 +473,6 @@ with tab1:
         fill="tozeroy",
         fillcolor=fill_main
     ))
-
-    # DC level as a horizontal scatter line (avoids add_hline version issues)
     fig.add_trace(go.Scatter(
         x=[t_ms[0], t_ms[-1]],
         y=[Vout_dc, Vout_dc],
@@ -263,7 +480,6 @@ with tab1:
         line=dict(color="#facc15", width=1.5, dash="dash"),
         mode="lines"
     ))
-
     fig.update_layout(
         template="plotly_dark",
         paper_bgcolor="#0b0f1a",
@@ -273,12 +489,11 @@ with tab1:
                     bgcolor="rgba(0,0,0,0)", bordercolor="#1e3a5f"),
         margin=dict(l=10, r=10, t=30, b=10),
         height=480,
-        xaxis=dict(title="Time (ms)",   gridcolor="#1a2a3a",
+        xaxis=dict(title="Time (ms)", gridcolor="#1a2a3a",
                    zeroline=True, zerolinecolor="#1e3a5f"),
         yaxis=dict(title="Voltage (V)", gridcolor="#1a2a3a",
                    zeroline=True, zerolinecolor="#1e3a5f"),
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
     with st.expander("⬇️  Export Waveform Data"):
@@ -309,42 +524,18 @@ with tab2:
         During the <strong>negative half-cycle</strong>, the diode is reverse-biased and blocks current,
         so the output is zero.<br><br>
         <strong>Key equations:</strong><br>
-        • V_DC = Vₚ / π ≈ 0.318 Vₚ<br>
-        • V_RMS = Vₚ / 2<br>
-        • Ripple factor γ = 1.21 (without filter)<br>
-        • Rectifier efficiency η = 40.6%<br>
-        • PIV = Vₚ<br><br>
+        &nbsp;&nbsp;• V_DC = Vₚ / π ≈ 0.318 Vₚ<br>
+        &nbsp;&nbsp;• V_RMS = Vₚ / 2<br>
+        &nbsp;&nbsp;• Ripple factor γ = 1.21 (without filter)<br>
+        &nbsp;&nbsp;• Rectifier efficiency η = 40.6%<br>
+        &nbsp;&nbsp;• PIV = Vₚ<br><br>
         Because only one half-cycle is used, this topology is the <em>least efficient</em> of the three.
         It is only suitable for very low power or signal applications.
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown('<p class="section-header">// Circuit Diagram</p>', unsafe_allow_html=True)
-        st.markdown("""
-        <svg viewBox="0 0 560 140" xmlns="http://www.w3.org/2000/svg"
-             style="background:#0d1520;border-radius:8px;border:1px solid #1e3a5f;width:100%;max-width:560px;">
-          <style>.w{stroke:#60a5fa;stroke-width:2;fill:none}
-                 .t{fill:#c0d4e8;font-family:Share Tech Mono,monospace;font-size:12px}
-                 .lbl{fill:#00d4ff;font-family:Share Tech Mono,monospace;font-size:11px}</style>
-          <circle cx="60" cy="70" r="28" class="w"/>
-          <text x="60" y="75" text-anchor="middle" class="t">~</text>
-          <text x="60" y="118" text-anchor="middle" class="lbl">Vᵢₙ</text>
-          <line x1="88" y1="42" x2="200" y2="42" class="w"/>
-          <polygon points="200,30 200,54 228,42" style="fill:#4ade80;stroke:#4ade80;stroke-width:1"/>
-          <line x1="228" y1="30" x2="228" y2="54" style="stroke:#4ade80;stroke-width:2.5"/>
-          <text x="214" y="26" text-anchor="middle" class="lbl">D</text>
-          <line x1="228" y1="42" x2="340" y2="42" class="w"/>
-          <rect x="340" y="28" width="80" height="28" rx="4" style="fill:#1a2a1a;stroke:#4ade80;stroke-width:1.5"/>
-          <text x="380" y="47" text-anchor="middle" class="lbl">Rₗ</text>
-          <line x1="420" y1="42" x2="480" y2="42" class="w"/>
-          <line x1="480" y1="42" x2="480" y2="98" class="w"/>
-          <line x1="88"  y1="98" x2="480" y2="98" class="w"/>
-          <text x="455" y="75" text-anchor="middle" class="lbl">Vₒᵤₜ</text>
-          <line x1="450" y1="48" x2="450" y2="92" style="stroke:#facc15;stroke-width:1.5;stroke-dasharray:4,3"/>
-          <line x1="447" y1="48" x2="453" y2="48" style="stroke:#facc15;stroke-width:1.5"/>
-          <line x1="447" y1="92" x2="453" y2="92" style="stroke:#facc15;stroke-width:1.5"/>
-        </svg>
-        """, unsafe_allow_html=True)
+        components.html(diag_hw(), height=170, scrolling=False)
 
     elif mode == "Full-Wave — Centre Tap":
         st.markdown("""
@@ -354,50 +545,20 @@ with tab2:
         ground reference. During the positive half-cycle, diode D₁ conducts; during the negative half-cycle,
         diode D₂ conducts. <em>Both half-cycles appear at the output</em>, doubling the ripple frequency.<br><br>
         <strong>Key equations:</strong><br>
-        • V_DC = 2Vₚ / π ≈ 0.636 Vₚ<br>
-        • V_RMS = Vₚ / √2<br>
-        • Ripple factor γ = 0.482 (without filter)<br>
-        • Rectifier efficiency η = 81.2%<br>
-        • PIV = 2Vₚ − Vd (each diode must block the full secondary voltage)<br><br>
+        &nbsp;&nbsp;• V_DC = 2Vₚ / π ≈ 0.636 Vₚ<br>
+        &nbsp;&nbsp;• V_RMS = Vₚ / √2<br>
+        &nbsp;&nbsp;• Ripple factor γ = 0.482 (without filter)<br>
+        &nbsp;&nbsp;• Rectifier efficiency η = 81.2%<br>
+        &nbsp;&nbsp;• PIV = 2Vₚ − Vd (each diode blocks the full secondary voltage)<br><br>
         The high PIV requirement means diodes with a higher voltage rating are needed compared to
         the bridge circuit, which is a practical disadvantage.
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown('<p class="section-header">// Circuit Diagram</p>', unsafe_allow_html=True)
-        st.markdown("""
-        <svg viewBox="0 0 580 160" xmlns="http://www.w3.org/2000/svg"
-             style="background:#0d1520;border-radius:8px;border:1px solid #1e3a5f;width:100%;max-width:580px;">
-          <style>.w{stroke:#60a5fa;stroke-width:2;fill:none}
-                 .t{fill:#c0d4e8;font-family:Share Tech Mono,monospace;font-size:12px}
-                 .lbl{fill:#818cf8;font-family:Share Tech Mono,monospace;font-size:11px}</style>
-          <rect x="20" y="30" width="60" height="100" rx="4" style="fill:#0d1520;stroke:#60a5fa;stroke-width:1.5"/>
-          <text x="50" y="85" text-anchor="middle" class="t">~</text>
-          <text x="50" y="145" text-anchor="middle" class="lbl">Transformer</text>
-          <line x1="80" y1="40"  x2="160" y2="40"  class="w"/>
-          <line x1="80" y1="120" x2="160" y2="120" class="w"/>
-          <line x1="80" y1="80"  x2="360" y2="80"
-                style="stroke:#60a5fa;stroke-width:1.5;stroke-dasharray:4,3"/>
-          <polygon points="160,28 160,52 188,40" style="fill:#818cf8;stroke:#818cf8;stroke-width:1"/>
-          <line x1="188" y1="28" x2="188" y2="52" style="stroke:#818cf8;stroke-width:2.5"/>
-          <text x="174" y="22" text-anchor="middle" class="lbl">D₁</text>
-          <polygon points="160,108 160,132 188,120" style="fill:#818cf8;stroke:#818cf8;stroke-width:1"/>
-          <line x1="188" y1="108" x2="188" y2="132" style="stroke:#818cf8;stroke-width:2.5"/>
-          <text x="174" y="145" text-anchor="middle" class="lbl">D₂</text>
-          <line x1="188" y1="40"  x2="300" y2="40"  class="w"/>
-          <line x1="188" y1="120" x2="300" y2="120" class="w"/>
-          <line x1="300" y1="40"  x2="300" y2="60"  class="w"/>
-          <line x1="300" y1="120" x2="300" y2="100" class="w"/>
-          <rect x="340" y="55" width="70" height="50" rx="4"
-                style="fill:#1a1a2a;stroke:#818cf8;stroke-width:1.5"/>
-          <text x="375" y="85" text-anchor="middle" class="lbl">Rₗ</text>
-          <line x1="300" y1="80" x2="340" y2="80" class="w"/>
-          <line x1="410" y1="80" x2="480" y2="80" class="w"/>
-          <text x="338" y="74" text-anchor="end" class="lbl">CT</text>
-        </svg>
-        """, unsafe_allow_html=True)
+        components.html(diag_fwct(), height=240, scrolling=False)
 
-    else:  # Bridge
+    else:
         st.markdown("""
         <div class="theory-box">
         <strong>Full-Wave Bridge Rectifier</strong><br><br>
@@ -405,56 +566,18 @@ with tab2:
         During the positive half-cycle, D₁ and D₃ conduct; during the negative half-cycle, D₂ and D₄ conduct.
         Current through the load always flows in the <em>same direction</em>.<br><br>
         <strong>Key equations:</strong><br>
-        • V_DC = 2Vₚ / π ≈ 0.636 Vₚ  (but 2×Vd loss)<br>
-        • V_RMS = Vₚ / √2<br>
-        • Ripple factor γ = 0.482 (without filter)<br>
-        • Rectifier efficiency η = 81.2%<br>
-        • PIV = Vₚ − Vd (much lower than centre-tap, so cheaper diodes can be used)<br><br>
+        &nbsp;&nbsp;• V_DC = 2Vₚ / π ≈ 0.636 Vₚ  (but 2×Vd loss)<br>
+        &nbsp;&nbsp;• V_RMS = Vₚ / √2<br>
+        &nbsp;&nbsp;• Ripple factor γ = 0.482 (without filter)<br>
+        &nbsp;&nbsp;• Rectifier efficiency η = 81.2%<br>
+        &nbsp;&nbsp;• PIV = Vₚ − Vd (lower than centre-tap → cheaper diodes)<br><br>
         The bridge is the <em>most widely used</em> rectifier topology in power supplies because it does not
         require a centre-tap and has a lower PIV requirement per diode.
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown('<p class="section-header">// Circuit Diagram</p>', unsafe_allow_html=True)
-        st.markdown("""
-        <svg viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg"
-             style="background:#0d1520;border-radius:8px;border:1px solid #1e3a5f;width:100%;max-width:560px;">
-          <style>.w{stroke:#60a5fa;stroke-width:2;fill:none}
-                 .lbl{fill:#fb923c;font-family:Share Tech Mono,monospace;font-size:11px}</style>
-          <circle cx="60" cy="100" r="28" class="w"/>
-          <text x="60" y="105" text-anchor="middle"
-                style="fill:#c0d4e8;font-family:monospace;font-size:14px">~</text>
-          <line x1="88" y1="72"  x2="200" y2="72"  class="w"/>
-          <line x1="88" y1="128" x2="200" y2="128" class="w"/>
-          <polygon points="200,100 220,68 240,84"   style="fill:#fb923c;stroke:#fb923c"/>
-          <line x1="240" y1="60" x2="240" y2="92"  style="stroke:#fb923c;stroke-width:2.5"/>
-          <text x="210" y="60" class="lbl">D₁</text>
-          <polygon points="280,52 300,68 280,84"    style="fill:#fb923c;stroke:#fb923c"/>
-          <line x1="278" y1="52" x2="278" y2="84"  style="stroke:#fb923c;stroke-width:2.5"/>
-          <text x="292" y="60" class="lbl">D₃</text>
-          <polygon points="200,100 220,130 240,114" style="fill:#fb923c;stroke:#fb923c"/>
-          <line x1="240" y1="108" x2="240" y2="140" style="stroke:#fb923c;stroke-width:2.5"/>
-          <text x="210" y="155" class="lbl">D₄</text>
-          <polygon points="280,116 300,132 280,148" style="fill:#fb923c;stroke:#fb923c"/>
-          <line x1="278" y1="116" x2="278" y2="148" style="stroke:#fb923c;stroke-width:2.5"/>
-          <text x="292" y="155" class="lbl">D₂</text>
-          <line x1="200" y1="72"  x2="200" y2="100" class="w"/>
-          <line x1="200" y1="100" x2="200" y2="128" class="w"/>
-          <line x1="240" y1="72"  x2="280" y2="72"  class="w"/>
-          <line x1="240" y1="128" x2="280" y2="128" class="w"/>
-          <line x1="280" y1="72"  x2="280" y2="52"  class="w"/>
-          <line x1="280" y1="128" x2="280" y2="148" class="w"/>
-          <line x1="280" y1="52"  x2="360" y2="52"  class="w"/>
-          <line x1="280" y1="148" x2="360" y2="148" class="w"/>
-          <rect x="360" y="80" width="70" height="40" rx="4"
-                style="fill:#2a1a0a;stroke:#fb923c;stroke-width:1.5"/>
-          <text x="395" y="105" text-anchor="middle" class="lbl">Rₗ</text>
-          <line x1="360" y1="52"  x2="430" y2="52"  class="w"/>
-          <line x1="430" y1="52"  x2="430" y2="80"  class="w"/>
-          <line x1="360" y1="148" x2="430" y2="148" class="w"/>
-          <line x1="430" y1="148" x2="430" y2="120" class="w"/>
-        </svg>
-        """, unsafe_allow_html=True)
+        components.html(diag_bridge(), height=250, scrolling=False)
 
     st.markdown('<p class="section-header">// Comparative Summary</p>', unsafe_allow_html=True)
     cmp = pd.DataFrame({
@@ -487,11 +610,9 @@ with tab3:
         fig2.add_trace(go.Scatter(
             x=vp_range, y=vdc_vals,
             line=dict(color=color_main, width=2.5),
-            fill="tozeroy",
-            fillcolor=fill_main,
+            fill="tozeroy", fillcolor=fill_main,
             name="V_DC"
         ))
-        # current Vp marker
         fig2.add_trace(go.Scatter(
             x=[Vp, Vp],
             y=[0, float(vdc_vals[np.argmin(np.abs(vp_range - Vp))])],
@@ -505,25 +626,24 @@ with tab3:
             xaxis=dict(title="Vₚ (V)", gridcolor="#1a2a3a"),
             yaxis=dict(title="V_DC (V)", gridcolor="#1a2a3a"),
             font=dict(family="Share Tech Mono", color="#c0d4e8", size=10),
-            legend=dict(orientation="h", y=-0.25, bgcolor="rgba(0,0,0,0)")
+            legend=dict(orientation="h", y=-0.3, bgcolor="rgba(0,0,0,0)")
         )
         st.plotly_chart(fig2, use_container_width=True)
 
     with col_b:
         st.markdown("**Ripple Factor vs Capacitance (C)**")
-        c_range    = np.linspace(1, 5000, 300)
-        f_ripple   = freq * ripple_freq_mult
-        vr_approx  = Vout_peak / (f_ripple * RL * c_range * 1e-6)
-        vdc_approx = np.clip(Vout_peak - vr_approx / 2, 0.001, Vout_peak)
-        vac_approx = vr_approx / (2 * np.sqrt(3))
+        c_range      = np.linspace(1, 5000, 300)
+        f_ripple     = freq * ripple_freq_mult
+        vr_approx    = Vout_peak / (f_ripple * RL * c_range * 1e-6)
+        vdc_approx   = np.clip(Vout_peak - vr_approx / 2, 0.001, Vout_peak)
+        vac_approx   = vr_approx / (2 * np.sqrt(3))
         gamma_approx = vac_approx / vdc_approx
 
         fig3 = go.Figure()
         fig3.add_trace(go.Scatter(
             x=c_range, y=gamma_approx,
             line=dict(color="#f0abfc", width=2.5),
-            fill="tozeroy",
-            fillcolor="rgba(240,171,252,0.08)",
+            fill="tozeroy", fillcolor="rgba(240,171,252,0.08)",
             name="Ripple Factor γ"
         ))
         fig3.update_layout(
@@ -532,22 +652,22 @@ with tab3:
             xaxis=dict(title="Capacitance C (µF)", gridcolor="#1a2a3a"),
             yaxis=dict(title="Ripple Factor γ", gridcolor="#1a2a3a"),
             font=dict(family="Share Tech Mono", color="#c0d4e8", size=10),
-            legend=dict(orientation="h", y=-0.25, bgcolor="rgba(0,0,0,0)")
+            legend=dict(orientation="h", y=-0.3, bgcolor="rgba(0,0,0,0)")
         )
         st.plotly_chart(fig3, use_container_width=True)
 
     st.markdown('<p class="section-header">// Detailed Computed Parameters</p>', unsafe_allow_html=True)
     params_df = pd.DataFrame({
         "Parameter": [
-            "Peak Input Voltage (Vₚ)",     "RMS Input Voltage",
-            "Peak Output Voltage",          "DC Output Voltage (V_DC)",
-            "RMS Output Voltage",           "Peak Inverse Voltage (PIV)",
-            "DC Load Current (I_DC)",       "Peak Load Current",
-            "Ripple Voltage p-p",           "Ripple Factor (γ)",
-            "Rectifier Efficiency (η)",     "Diodes Required",
+            "Peak Input Voltage (Vₚ)",    "RMS Input Voltage",
+            "Peak Output Voltage",         "DC Output Voltage (V_DC)",
+            "RMS Output Voltage",          "Peak Inverse Voltage (PIV)",
+            "DC Load Current (I_DC)",      "Peak Load Current",
+            "Ripple Voltage p-p",          "Ripple Factor (γ)",
+            "Rectifier Efficiency (η)",    "Diodes Required",
         ],
         "Value": [
-            f"{Vp:.2f} V",          f"{Vin_rms:.3f} V",
+            f"{Vp:.1f} V",          f"{Vin_rms:.3f} V",
             f"{Vout_peak:.3f} V",   f"{Vout_dc:.3f} V",
             f"{Vout_rms:.3f} V",    f"{PIV:.2f} V",
             f"{Idc:.2f} mA",        f"{Ipeak:.2f} mA",
