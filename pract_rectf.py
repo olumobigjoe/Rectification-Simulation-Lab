@@ -124,7 +124,7 @@ if not st.session_state["auth"]:
     c1, c2, c3 = st.columns([1, 1.4, 1])
     with c2:
         st.markdown("Enter your **Matriculation Number**")
-        matric = st.text_input(" ", placeholder="e.g. PHY/2026/0001")
+        matric = st.text_input("Matriculation Number", placeholder="e.g. PHY/2026/0001")
         if st.button("▶  LOGIN"):
             if matric.strip():
                 st.session_state["student_id"] = matric.strip()
