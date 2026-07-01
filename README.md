@@ -1,4 +1,4 @@
-# ⚡ Rectification Lab
+# ⚡ Rectification for Beginners
 
 > **Interactive Half-Wave & Full-Wave Rectifier Simulator**  
 > Department of Physics / Electronics — Power Electronics Laboratory
