@@ -113,7 +113,8 @@ for k, v in defaults.items():
 st.markdown("""
 <div class="hero-banner">
     <p class="hero-title">⚡ TOPIC: Rectification</p>
-    <p class="hero-subtitle">Department of Physics/Electronics — Virtual Electronics Laboratory</p>
+    <p class="hero-subtitle">VIRTUAL ELECTRONIC LABORATORY</p>
+    <p class="hero-subtitle">Department of Physics/Electronics</p>
     <p class="hero-subtitle">Federal  Polytechnic Ado-Ekiti</p>
 </div>
 """, unsafe_allow_html=True)
